@@ -47,4 +47,7 @@ public class Usuario extends EntidadeAuditavel {
     
     @Column(name = "mp_access_token") private String mercadoPagoAccessToken;
     @Column(name = "mp_refresh_token") private String mercadoPagoRefreshToken;
+
+    
 }
+

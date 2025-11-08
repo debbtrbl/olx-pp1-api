@@ -1,13 +1,13 @@
 version: "3"
 services:
-
-   db:
-     image: postgres:9.6
-     restart: always
-     environment:
-       POSTGRES_PASSWORD: olx-pp1
-       POSTGRES_DB: olx-pp1
-     ports:
-       - 5436:5432
-     volumes:
-       - ./postgres-data:/bitnami/postgresql/data
+  db:
+    image: postgres:9.6
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: olx_pp1_db
+    ports:
+      - 5436:5432
+    volumes:
+      - ./postgres-data:/bitnami/postgresql/data
