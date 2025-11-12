@@ -1,0 +1,107 @@
+package br.com.ifpe.olx_pp1_api.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import br.com.ifpe.olx_pp1_api.dto.ProdutoRequest;
+import br.com.ifpe.olx_pp1_api.modelo.CategoriaProduto;
+import br.com.ifpe.olx_pp1_api.modelo.Produto;
+import br.com.ifpe.olx_pp1_api.service.ProdutoService;
+
+@RestController
+@RequestMapping("/api/produtos")
+@CrossOrigin
+public class ProdutoController {
+
+    @Autowired
+    private ProdutoService produtoService;
+
+    // ✅ Criar produto (público temporariamente)
+    @PostMapping("/usuario/{usuarioId}")
+    public ResponseEntity<Produto> criarProduto(@PathVariable Long usuarioId, @RequestBody ProdutoRequest request) {
+        Produto produto = request.build();
+        Produto produtoSalvo = produtoService.criarProduto(produto, usuarioId);
+        return new ResponseEntity<>(produtoSalvo, HttpStatus.CREATED);
+    }
+
+    // ✅ Editar produto
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> editarProduto(
+            @PathVariable Long id,
+            @RequestBody ProdutoRequest request) {
+
+        Produto produto = request.build();
+        produtoService.editarProduto(id, produto);
+        return ResponseEntity.ok().build();
+    }
+
+    // ✅ Excluir produto
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> excluirProduto(@PathVariable Long id) {
+        produtoService.excluirProduto(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // ✅ Marcar como vendido
+    @PutMapping("/{id}/vendido")
+    public ResponseEntity<Void> marcarComoVendido(@PathVariable Long id) {
+        produtoService.marcarComoVendido(id);
+        return ResponseEntity.ok().build();
+    }
+
+    // ✅ Visualizar detalhes
+    @GetMapping("/{id}")
+    public ResponseEntity<Produto> visualizarDetalhes(@PathVariable Long id) {
+        Produto produto = produtoService.visualizarDetalhes(id);
+        return ResponseEntity.ok(produto);
+    }
+
+    // ✅ Pesquisar produtos
+    @GetMapping("/pesquisar")
+    public List<Produto> pesquisarProdutos(@RequestParam String termo) {
+        return produtoService.pesquisarProdutos(termo);
+    }
+
+    // ✅ Listar todos ativos
+    @GetMapping
+    public List<Produto> listarTodosAtivos() {
+        return produtoService.listarTodosAtivos();
+    }
+
+    // ✅ Listar todos vendidos
+    @GetMapping("/vendidos")
+    public List<Produto> listarTodosVendidos() {
+        return produtoService.listarTodosVendidos();
+    }
+
+    // ✅ Listar por categoria
+    @GetMapping("/categoria/{categoria}")
+    public List<Produto> listarPorCategoria(@PathVariable CategoriaProduto categoria) {
+        return produtoService.listarPorCategoria(categoria);
+    }
+
+    // ✅ NOVO: listar produtos de um usuário específico (público)
+    @GetMapping("/usuario/{usuarioId}")
+    public List<Produto> listarProdutosDeUsuario(@PathVariable Long usuarioId) {
+        return produtoService.listarProdutosDeUsuario(usuarioId);
+    }
+
+    // listar produtos vendidos de um ususário específico
+    @GetMapping("/usuario/{usuarioId}/vendidos")
+    public List<Produto> listarProdutosVendidosDeUsuario(@PathVariable Long usuarioId) {
+        return produtoService.listarProdutosVendidosDeUsuario(usuarioId);
+    }
+}

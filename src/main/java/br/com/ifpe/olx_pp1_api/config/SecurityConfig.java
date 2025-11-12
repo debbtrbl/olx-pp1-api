@@ -42,7 +42,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**").permitAll() 
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll() 
-                .anyRequest().authenticated() 
+                .requestMatchers("/api/produtos/**").permitAll() //  acesso público aos endpoints de produto
+                // .anyRequest().authenticated() 
+                .anyRequest().permitAll() 
+
+                
             )
             
             

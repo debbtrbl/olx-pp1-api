@@ -1,0 +1,111 @@
+package br.com.ifpe.olx_pp1_api.service;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import br.com.ifpe.olx_pp1_api.modelo.CategoriaProduto;
+import br.com.ifpe.olx_pp1_api.modelo.Produto;
+import br.com.ifpe.olx_pp1_api.modelo.StatusProduto;
+import br.com.ifpe.olx_pp1_api.modelo.Usuario;
+import br.com.ifpe.olx_pp1_api.repository.ProdutoRepository;
+import br.com.ifpe.olx_pp1_api.repository.UsuarioRepository;
+import jakarta.transaction.Transactional;
+
+@Service
+public class ProdutoService {
+
+    @Autowired
+    private ProdutoRepository repository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    // ✅ Criar produto (sem autenticação, passando o ID do usuário diretamente)
+    @Transactional
+    public Produto criarProduto(Produto produto, Long usuarioId) {
+        Usuario usuario = usuarioRepository.findById(usuarioId)
+            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        produto.setVendedor(usuario);
+        produto.setDataPublicacao(LocalDate.now());
+        produto.setStatus(StatusProduto.ATIVO);
+        produto.setHabilitado(Boolean.TRUE);
+
+        return repository.save(produto);
+    }
+
+    // ✅ Editar produto
+    @Transactional
+    public void editarProduto(Long id, Produto produtoAlterado) {
+        Produto produto = repository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        produto.setNome(produtoAlterado.getNome());
+        produto.setDescricao(produtoAlterado.getDescricao());
+        produto.setCondicao(produtoAlterado.getCondicao());
+        produto.setPreco(produtoAlterado.getPreco());
+        produto.setCategoriaProduto(produtoAlterado.getCategoriaProduto());
+        produto.setCaracteristicas(produtoAlterado.getCaracteristicas());
+
+        repository.save(produto);
+    }
+
+    // ✅ Excluir produto
+    @Transactional
+    public void excluirProduto(Long id) {
+        Produto produto = repository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        produto.setHabilitado(Boolean.FALSE);
+        repository.save(produto);
+    }
+
+    // ✅ Marcar como vendido
+    @Transactional
+    public void marcarComoVendido(Long id) {
+        Produto produto = repository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        produto.setStatus(StatusProduto.VENDIDO);
+        repository.save(produto);
+    }
+
+    // ✅ Listar produtos de um usuário específico
+    public List<Produto> listarProdutosDeUsuario(Long usuarioId) {
+        return repository.findByVendedorId(usuarioId);
+    }
+
+    // listar produtos vendidos de um ususário específico
+    public List<Produto> listarProdutosVendidosDeUsuario(Long usuarioId) {
+        return repository.findByVendedorIdAndStatus(usuarioId, StatusProduto.VENDIDO);
+    }
+
+    // ✅ Visualizar detalhes
+    public Produto visualizarDetalhes(Long id) {
+        return repository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+    }
+
+    // ✅ Pesquisar produtos
+    public List<Produto> pesquisarProdutos(String termo) {
+        return repository.pesquisarProdutosAtivos(termo);
+    }
+
+    // ✅ Listar todos ativos
+    public List<Produto> listarTodosAtivos() {
+        return repository.findByStatus(StatusProduto.ATIVO);
+    }
+
+    // listar todos os vendidos
+    public List<Produto> listarTodosVendidos() {
+        return repository.findByStatus(StatusProduto.VENDIDO);
+    }
+
+    // ✅ Listar por categoria
+    public List<Produto> listarPorCategoria(CategoriaProduto categoria) {
+        return repository.findByCategoriaProdutoAndStatus(categoria, StatusProduto.ATIVO);
+    }
+}
