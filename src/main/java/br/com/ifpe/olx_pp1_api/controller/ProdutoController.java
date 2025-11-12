@@ -29,7 +29,7 @@ public class ProdutoController {
     @Autowired
     private ProdutoService produtoService;
 
-    // ✅ Criar produto (público temporariamente)
+    // criar produto 
     @PostMapping("/usuario/{usuarioId}")
     public ResponseEntity<Produto> criarProduto(@PathVariable Long usuarioId, @RequestBody ProdutoRequest request) {
         Produto produto = request.build();
@@ -37,7 +37,7 @@ public class ProdutoController {
         return new ResponseEntity<>(produtoSalvo, HttpStatus.CREATED);
     }
 
-    // ✅ Editar produto
+    // editar produto
     @PutMapping("/{id}")
     public ResponseEntity<Void> editarProduto(
             @PathVariable Long id,
@@ -48,52 +48,52 @@ public class ProdutoController {
         return ResponseEntity.ok().build();
     }
 
-    // ✅ Excluir produto
+    // excluir produto
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluirProduto(@PathVariable Long id) {
         produtoService.excluirProduto(id);
         return ResponseEntity.ok().build();
     }
 
-    // ✅ Marcar como vendido
+    // marcar como vendido
     @PutMapping("/{id}/vendido")
     public ResponseEntity<Void> marcarComoVendido(@PathVariable Long id) {
         produtoService.marcarComoVendido(id);
         return ResponseEntity.ok().build();
     }
 
-    // ✅ Visualizar detalhes
+    // visualizar detalhes de um produto
     @GetMapping("/{id}")
     public ResponseEntity<Produto> visualizarDetalhes(@PathVariable Long id) {
         Produto produto = produtoService.visualizarDetalhes(id);
         return ResponseEntity.ok(produto);
     }
 
-    // ✅ Pesquisar produtos
+    // pesquisar produtos
     @GetMapping("/pesquisar")
     public List<Produto> pesquisarProdutos(@RequestParam String termo) {
         return produtoService.pesquisarProdutos(termo);
     }
 
-    // ✅ Listar todos ativos
+    // listar todos ativos
     @GetMapping
     public List<Produto> listarTodosAtivos() {
         return produtoService.listarTodosAtivos();
     }
 
-    // ✅ Listar todos vendidos
+    // listar todos vendidos
     @GetMapping("/vendidos")
     public List<Produto> listarTodosVendidos() {
         return produtoService.listarTodosVendidos();
     }
 
-    // ✅ Listar por categoria
+    // listar por categoria
     @GetMapping("/categoria/{categoria}")
     public List<Produto> listarPorCategoria(@PathVariable CategoriaProduto categoria) {
         return produtoService.listarPorCategoria(categoria);
     }
 
-    // ✅ NOVO: listar produtos de um usuário específico (público)
+    // listar produtos de um usuário específico 
     @GetMapping("/usuario/{usuarioId}")
     public List<Produto> listarProdutosDeUsuario(@PathVariable Long usuarioId) {
         return produtoService.listarProdutosDeUsuario(usuarioId);

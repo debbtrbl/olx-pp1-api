@@ -23,7 +23,7 @@ public class ProdutoService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    // ✅ Criar produto (sem autenticação, passando o ID do usuário diretamente)
+    // criar produto (passando o id do usuário vendedor)
     @Transactional
     public Produto criarProduto(Produto produto, Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
@@ -37,7 +37,7 @@ public class ProdutoService {
         return repository.save(produto);
     }
 
-    // ✅ Editar produto
+    // editar produto
     @Transactional
     public void editarProduto(Long id, Produto produtoAlterado) {
         Produto produto = repository.findById(id)
@@ -53,7 +53,7 @@ public class ProdutoService {
         repository.save(produto);
     }
 
-    // ✅ Excluir produto
+    // excluir produto
     @Transactional
     public void excluirProduto(Long id) {
         Produto produto = repository.findById(id)
@@ -63,7 +63,7 @@ public class ProdutoService {
         repository.save(produto);
     }
 
-    // ✅ Marcar como vendido
+    // marcar como vendido
     @Transactional
     public void marcarComoVendido(Long id) {
         Produto produto = repository.findById(id)
@@ -73,7 +73,7 @@ public class ProdutoService {
         repository.save(produto);
     }
 
-    // ✅ Listar produtos de um usuário específico
+    // listar produtos de um usuário específico
     public List<Produto> listarProdutosDeUsuario(Long usuarioId) {
         return repository.findByVendedorId(usuarioId);
     }
@@ -83,18 +83,18 @@ public class ProdutoService {
         return repository.findByVendedorIdAndStatus(usuarioId, StatusProduto.VENDIDO);
     }
 
-    // ✅ Visualizar detalhes
+    // visualizar detalhes
     public Produto visualizarDetalhes(Long id) {
         return repository.findById(id)
             .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
     }
 
-    // ✅ Pesquisar produtos
+    // pesquisar produtos
     public List<Produto> pesquisarProdutos(String termo) {
         return repository.pesquisarProdutosAtivos(termo);
     }
 
-    // ✅ Listar todos ativos
+    // listar todos ativos
     public List<Produto> listarTodosAtivos() {
         return repository.findByStatus(StatusProduto.ATIVO);
     }
@@ -104,7 +104,7 @@ public class ProdutoService {
         return repository.findByStatus(StatusProduto.VENDIDO);
     }
 
-    // ✅ Listar por categoria
+    // listar por categoria
     public List<Produto> listarPorCategoria(CategoriaProduto categoria) {
         return repository.findByCategoriaProdutoAndStatus(categoria, StatusProduto.ATIVO);
     }

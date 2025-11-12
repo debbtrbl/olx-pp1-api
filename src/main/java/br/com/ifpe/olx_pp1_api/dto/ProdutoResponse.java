@@ -26,7 +26,7 @@ public class ProdutoResponse {
     private StatusProduto status;
     private CategoriaProduto categoriaProduto;
     private Map<String, Object> caracteristicas;
-    private String nomeVendedor; // ⭐ APENAS O NOME DO VENDEDOR
+    private String nomeVendedor; 
 
     public static ProdutoResponse fromProduto(Produto produto) {
         return ProdutoResponse.builder()

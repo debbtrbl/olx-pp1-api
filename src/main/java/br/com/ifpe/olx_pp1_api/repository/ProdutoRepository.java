@@ -12,16 +12,16 @@ import br.com.ifpe.olx_pp1_api.modelo.StatusProduto;
 
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     
-    List<Produto> findByStatus(StatusProduto status);
+    List<Produto> findByStatus(StatusProduto status); // produtos por status (ativo, vendido, inativo)
     
-    List<Produto> findByCategoriaProdutoAndStatus(CategoriaProduto categoria, StatusProduto status);
+    List<Produto> findByCategoriaProdutoAndStatus(CategoriaProduto categoria, StatusProduto status); // produtos por categoria e status
     
-    List<Produto> findByVendedorIdAndStatus(Long vendedorId, StatusProduto status);
+    List<Produto> findByVendedorIdAndStatus(Long vendedorId, StatusProduto status); // produtos de um vendedor com status específico (vendido, ativo ou inativo)
     
     @Query("SELECT p FROM Produto p WHERE p.status = 'ATIVO' AND " +
            "(LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
            "LOWER(p.descricao) LIKE LOWER(CONCAT('%', :termo, '%')))")
-    List<Produto> pesquisarProdutosAtivos(@Param("termo") String termo);
+    List<Produto> pesquisarProdutosAtivos(@Param("termo") String termo); // pesquisa por nome ou descrição
     
-    List<Produto> findByVendedorId(Long vendedorId);
+    List<Produto> findByVendedorId(Long vendedorId); // todos os produtos de um vendedor, independente do status
 }
