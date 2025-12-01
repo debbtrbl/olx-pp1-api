@@ -1,9 +1,8 @@
 package br.com.ifpe.olx_pp1_api.modelo;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
-
-import org.hibernate.annotations.SQLRestriction;
 
 import br.com.ifpe.olx_pp1_api.util.entity.EntidadeAuditavel;
 import jakarta.persistence.CollectionTable;
@@ -23,7 +22,6 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "Usuario")
-@SQLRestriction("habilitado = true")
 @Builder
 @Getter
 @Setter
@@ -47,4 +45,16 @@ public class Usuario extends EntidadeAuditavel {
     
     @Column(name = "mp_access_token") private String mercadoPagoAccessToken;
     @Column(name = "mp_refresh_token") private String mercadoPagoRefreshToken;
+
+    @Column(nullable = false)
+    private boolean habilitado = false;
+
+    @Column(name = "codigo_verificacao")
+    private String codigoVerificacao;
+
+    @Column(name = "token_redefinicao_senha")
+    private String tokenRedefinicaoSenha;
+
+    @Column(name = "data_expiracao_redefinicao")
+    private LocalDateTime dataExpiracaoRedefinicao;
 }

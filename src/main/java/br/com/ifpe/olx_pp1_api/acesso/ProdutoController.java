@@ -1,4 +1,4 @@
-package br.com.ifpe.olx_pp1_api.controller;
+package br.com.ifpe.olx_pp1_api.acesso;
 
 import java.util.List;
 
