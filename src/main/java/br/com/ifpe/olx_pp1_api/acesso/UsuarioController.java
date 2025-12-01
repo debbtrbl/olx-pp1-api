@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.ifpe.olx_pp1_api.dto.UsuarioResponse;
 import br.com.ifpe.olx_pp1_api.dto.UsuarioUpdateRequest;
+import br.com.ifpe.olx_pp1_api.modelo.Endereco;
 import br.com.ifpe.olx_pp1_api.modelo.Usuario;
 import br.com.ifpe.olx_pp1_api.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -23,10 +25,9 @@ public class UsuarioController {
 
     private final UsuarioService usuarioService;
 
-  
     @GetMapping("/me")
     public ResponseEntity<UsuarioResponse> getMyProfile(
-            @AuthenticationPrincipal UserDetails userDetails
+            @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails
     ) {
         String email = userDetails.getUsername(); 
         
@@ -36,10 +37,9 @@ public class UsuarioController {
         return ResponseEntity.ok(UsuarioResponse.fromUsuario(usuario));
     }
 
- 
     @PutMapping("/me")
     public ResponseEntity<UsuarioResponse> updateMyProfile(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody UsuarioUpdateRequest request
     ) {
         String email = userDetails.getUsername();
@@ -47,16 +47,22 @@ public class UsuarioController {
         Usuario usuario = usuarioService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado no token"));
 
-   
         if (request.getNome() != null) { 
             usuario.setNome(request.getNome()); 
         }
         if (request.getTelefone() != null) { 
             usuario.setTelefone(request.getTelefone()); 
         }
-        if (request.getCep() != null) { 
-            usuario.setCep(request.getCep()); 
+        
+        if (request.getCep() != null) {
+            
+            if (usuario.getEndereco() == null) {
+                usuario.setEndereco(new Endereco());
+            }
+    
+            usuario.getEndereco().setCep(request.getCep());
         }
+    
 
         Usuario usuarioSalvo = usuarioService.save(usuario);
 
