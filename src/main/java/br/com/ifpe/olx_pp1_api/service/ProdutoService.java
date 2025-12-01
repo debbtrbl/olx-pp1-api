@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import br.com.ifpe.olx_pp1_api.modelo.CategoriaProduto;
 import br.com.ifpe.olx_pp1_api.modelo.Produto;
@@ -12,6 +13,7 @@ import br.com.ifpe.olx_pp1_api.modelo.StatusProduto;
 import br.com.ifpe.olx_pp1_api.modelo.Usuario;
 import br.com.ifpe.olx_pp1_api.repository.ProdutoRepository;
 import br.com.ifpe.olx_pp1_api.repository.UsuarioRepository;
+import br.com.ifpe.olx_pp1_api.util.Util;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -27,7 +29,7 @@ public class ProdutoService {
     @Transactional
     public Produto criarProduto(Produto produto, Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
         produto.setVendedor(usuario);
         produto.setDataPublicacao(LocalDate.now());
@@ -41,7 +43,7 @@ public class ProdutoService {
     @Transactional
     public void editarProduto(Long id, Produto produtoAlterado) {
         Produto produto = repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
 
         produto.setNome(produtoAlterado.getNome());
         produto.setDescricao(produtoAlterado.getDescricao());
@@ -57,7 +59,7 @@ public class ProdutoService {
     @Transactional
     public void excluirProduto(Long id) {
         Produto produto = repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
 
         produto.setHabilitado(Boolean.FALSE);
         repository.save(produto);
@@ -67,7 +69,7 @@ public class ProdutoService {
     @Transactional
     public void marcarComoVendido(Long id) {
         Produto produto = repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
 
         produto.setStatus(StatusProduto.VENDIDO);
         repository.save(produto);
@@ -86,7 +88,7 @@ public class ProdutoService {
     // visualizar detalhes
     public Produto visualizarDetalhes(Long id) {
         return repository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
     }
 
     // pesquisar produtos
@@ -108,4 +110,32 @@ public class ProdutoService {
     public List<Produto> listarPorCategoria(CategoriaProduto categoria) {
         return repository.findByCategoriaProdutoAndStatus(categoria, StatusProduto.ATIVO);
     }
+
+    // obter por ID
+    public Produto obterPorID(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+    }
+
+    // salvar imagem do produto
+    @Transactional
+    public Produto salvarImagem(Long id, MultipartFile imagem) {
+        Produto produto = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        String imagemUpada = Util.fazerUploadImagem(imagem);
+
+        if (imagemUpada != null) {
+            produto.setImagem(imagemUpada);
+        }
+
+        return repository.save(produto);
+    }
+
+    // pesquisa com múltiplos filtros
+    public List<Produto> pesquisarProdutosComFiltros(String termo, CategoriaProduto categoria,
+            Double precoMin, Double precoMax, String uf) {
+        return repository.pesquisarProdutosComFiltros(termo, categoria, precoMin, precoMax, uf);
+    }
+
 }

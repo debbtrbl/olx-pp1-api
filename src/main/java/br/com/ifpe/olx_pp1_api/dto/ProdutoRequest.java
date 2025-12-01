@@ -37,6 +37,8 @@ public class ProdutoRequest {
     @NotNull(message = "A categoria é de preenchimento obrigatório")
     private CategoriaProduto categoriaProduto;
 
+    private String imagem;
+
    private Map<String, Object> caracteristicas;
 
     public Produto build() {
@@ -46,6 +48,7 @@ public class ProdutoRequest {
                 .condicao(condicao)
                 .preco(preco)
                 .categoriaProduto(categoriaProduto)
+                .imagem(imagem) 
                 .caracteristicas(caracteristicas)
                 .build();
     }

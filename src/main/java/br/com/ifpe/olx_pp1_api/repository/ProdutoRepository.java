@@ -24,4 +24,23 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     List<Produto> pesquisarProdutosAtivos(@Param("termo") String termo); // pesquisa por nome ou descrição
     
     List<Produto> findByVendedorId(Long vendedorId); // todos os produtos de um vendedor, independente do status
+
+
+    // pesquisa com múltiplos filtros
+    @Query("SELECT p FROM Produto p WHERE p.status = 'ATIVO' AND " +
+           "(LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
+           "LOWER(p.descricao) LIKE LOWER(CONCAT('%', :termo, '%'))) " +
+           "AND (:categoria IS NULL OR p.categoriaProduto = :categoria) " +
+           "AND (:precoMin IS NULL OR p.preco >= :precoMin) " +
+           "AND (:precoMax IS NULL OR p.preco <= :precoMax) " +
+           "AND (:uf IS NULL OR p.vendedor.endereco.uf = :uf)")
+    List<Produto> pesquisarProdutosComFiltros(
+            @Param("termo") String termo,
+            @Param("categoria") CategoriaProduto categoria,
+            @Param("precoMin") Double precoMin,
+            @Param("precoMax") Double precoMax,
+            @Param("uf") String uf);
+
+    
+
 }

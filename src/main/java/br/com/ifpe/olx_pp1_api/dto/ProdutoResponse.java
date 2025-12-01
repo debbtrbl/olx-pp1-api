@@ -25,8 +25,10 @@ public class ProdutoResponse {
     private LocalDate dataPublicacao;
     private StatusProduto status;
     private CategoriaProduto categoriaProduto;
+    private String imagem;
     private Map<String, Object> caracteristicas;
     private String nomeVendedor; 
+    private String telefoneVendedor;
 
     public static ProdutoResponse fromProduto(Produto produto) {
         return ProdutoResponse.builder()
@@ -40,6 +42,8 @@ public class ProdutoResponse {
                 .categoriaProduto(produto.getCategoriaProduto())
                 .caracteristicas(produto.getCaracteristicas())
                 .nomeVendedor(produto.getVendedor().getNome()) 
+                .telefoneVendedor(produto.getVendedor().getTelefone())
+                .imagem(produto.getImagem())
                 .build();
     }
 }

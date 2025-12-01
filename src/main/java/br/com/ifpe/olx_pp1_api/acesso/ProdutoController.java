@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import br.com.ifpe.olx_pp1_api.dto.ProdutoRequest;
+import br.com.ifpe.olx_pp1_api.dto.ProdutoResponse;
 import br.com.ifpe.olx_pp1_api.modelo.CategoriaProduto;
 import br.com.ifpe.olx_pp1_api.modelo.Produto;
 import br.com.ifpe.olx_pp1_api.service.ProdutoService;
@@ -29,7 +31,7 @@ public class ProdutoController {
     @Autowired
     private ProdutoService produtoService;
 
-    // criar produto 
+    // criar produto
     @PostMapping("/usuario/{usuarioId}")
     public ResponseEntity<Produto> criarProduto(@PathVariable Long usuarioId, @RequestBody ProdutoRequest request) {
         Produto produto = request.build();
@@ -93,7 +95,7 @@ public class ProdutoController {
         return produtoService.listarPorCategoria(categoria);
     }
 
-    // listar produtos de um usuário específico 
+    // listar produtos de um usuário específico
     @GetMapping("/usuario/{usuarioId}")
     public List<Produto> listarProdutosDeUsuario(@PathVariable Long usuarioId) {
         return produtoService.listarProdutosDeUsuario(usuarioId);
@@ -103,5 +105,26 @@ public class ProdutoController {
     @GetMapping("/usuario/{usuarioId}/vendidos")
     public List<Produto> listarProdutosVendidosDeUsuario(@PathVariable Long usuarioId) {
         return produtoService.listarProdutosVendidosDeUsuario(usuarioId);
+    }
+
+    @PostMapping("/{id}/imagem")
+    public ResponseEntity<ProdutoResponse> uploadImagem(
+            @PathVariable Long id,
+            @RequestParam("imagem") MultipartFile imagem) {
+
+        Produto produto = produtoService.salvarImagem(id, imagem);
+        return ResponseEntity.ok(ProdutoResponse.fromProduto(produto));
+    }
+
+    // pesquisa com múltiplos filtros
+    @GetMapping("/pesquisar-avancado")
+    public List<Produto> pesquisarProdutosComFiltros(
+            @RequestParam(required = false) String termo,
+            @RequestParam(required = false) CategoriaProduto categoria,
+            @RequestParam(required = false) Double precoMin,
+            @RequestParam(required = false) Double precoMax,
+            @RequestParam(required = false) String uf) {
+
+        return produtoService.pesquisarProdutosComFiltros(termo, categoria, precoMin, precoMax, uf);
     }
 }
