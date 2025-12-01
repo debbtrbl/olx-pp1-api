@@ -25,6 +25,7 @@ public class ProdutoResponse {
     private LocalDate dataPublicacao;
     private StatusProduto status;
     private CategoriaProduto categoriaProduto;
+    private String imagem;
     private Map<String, Object> caracteristicas;
     private String nomeVendedor; 
 
@@ -40,6 +41,7 @@ public class ProdutoResponse {
                 .categoriaProduto(produto.getCategoriaProduto())
                 .caracteristicas(produto.getCaracteristicas())
                 .nomeVendedor(produto.getVendedor().getNome()) 
+                .imagem(produto.getImagem())
                 .build();
     }
 }

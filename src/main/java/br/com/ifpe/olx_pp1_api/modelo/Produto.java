@@ -63,4 +63,7 @@ public class Produto extends EntidadeAuditavel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id", nullable = false) 
     private Usuario vendedor;
+
+    @Column
+    private String imagem;
 }
