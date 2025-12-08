@@ -38,7 +38,7 @@ public class UsuarioService {
 
         Usuario usuarioSalvo = usuarioRepository.save(usuario);
 
-        String link = "http://localhost:8080/api/auth/verify?codigo=" + usuarioSalvo.getCodigoVerificacao();
+        String link = "http://localhost:5173/verificar-email?codigo=" + usuarioSalvo.getCodigoVerificacao();
         
         emailService.enviarEmail(
             usuarioSalvo.getEmail(), 
@@ -61,7 +61,7 @@ public class UsuarioService {
     
     private void enviarEmailAtivacao(Usuario usuario) {
        
-        String link = "http://localhost:8080/api/auth/verify?codigo=" + usuario.getCodigoVerificacao();
+        String link = "http://localhost:5173/verificar-email?codigo=" + usuario.getCodigoVerificacao();
         
         emailService.enviarEmail(
             usuario.getEmail(), 
