@@ -30,7 +30,6 @@ public class UsuarioController {
             @Parameter(hidden = true) @AuthenticationPrincipal UserDetails userDetails
     ) {
         String email = userDetails.getUsername(); 
-        
         Usuario usuario = usuarioService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado no token"));
 
@@ -43,26 +42,32 @@ public class UsuarioController {
             @Valid @RequestBody UsuarioUpdateRequest request
     ) {
         String email = userDetails.getUsername();
-        
         Usuario usuario = usuarioService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado no token"));
 
-        if (request.getNome() != null) { 
-            usuario.setNome(request.getNome()); 
-        }
-        if (request.getTelefone() != null) { 
-            usuario.setTelefone(request.getTelefone()); 
-        }
         
-        if (request.getCep() != null) {
+        if (request.getNome() != null) usuario.setNome(request.getNome());
+        if (request.getTelefone() != null) usuario.setTelefone(request.getTelefone());
+        if (request.getDataNascimento() != null) usuario.setDataNascimento(request.getDataNascimento());
+
+        
+        if (request.getCep() != null || request.getLogradouro() != null || request.getCidade() != null) {
+            
             
             if (usuario.getEndereco() == null) {
                 usuario.setEndereco(new Endereco());
             }
-    
-            usuario.getEndereco().setCep(request.getCep());
+
+            Endereco endereco = usuario.getEndereco();
+            
+            if (request.getCep() != null) endereco.setCep(request.getCep());
+            if (request.getLogradouro() != null) endereco.setLogradouro(request.getLogradouro());
+            if (request.getNumero() != null) endereco.setNumero(request.getNumero());
+            if (request.getBairro() != null) endereco.setBairro(request.getBairro());
+            if (request.getCidade() != null) endereco.setCidade(request.getCidade());
+            if (request.getUf() != null) endereco.setUf(request.getUf());
+            if (request.getComplemento() != null) endereco.setComplemento(request.getComplemento());
         }
-    
 
         Usuario usuarioSalvo = usuarioService.save(usuario);
 
