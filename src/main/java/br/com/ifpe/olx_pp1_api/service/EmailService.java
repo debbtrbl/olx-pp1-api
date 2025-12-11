@@ -12,8 +12,7 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-   
-    @Value("${spring.mail.username}")
+    @Value("${app.email.remetente}")
     private String remetente;
 
     public void enviarEmail(String destinatario, String assunto, String corpo) {
@@ -25,11 +24,11 @@ public class EmailService {
             message.setText(corpo);
 
             mailSender.send(message);
-            
+
             System.out.println("Email enviado com sucesso para: " + destinatario);
         } catch (Exception e) {
             System.err.println("ERRO AO ENVIAR EMAIL: " + e.getMessage());
-           
+
         }
     }
 }
