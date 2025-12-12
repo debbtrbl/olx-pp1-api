@@ -1,7 +1,6 @@
 package br.com.ifpe.olx_pp1_api.modelo;
 
 import java.time.LocalDate;
-import java.util.Map;
 
 import org.hibernate.annotations.SQLRestriction;
 

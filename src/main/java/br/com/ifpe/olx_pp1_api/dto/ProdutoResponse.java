@@ -1,7 +1,6 @@
 package br.com.ifpe.olx_pp1_api.dto;
 
 import java.time.LocalDate;
-import java.util.Map;
 
 import br.com.ifpe.olx_pp1_api.modelo.CategoriaProduto;
 import br.com.ifpe.olx_pp1_api.modelo.CondicaoProduto;

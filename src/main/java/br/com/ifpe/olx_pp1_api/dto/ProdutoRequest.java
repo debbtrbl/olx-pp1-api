@@ -1,7 +1,4 @@
 package br.com.ifpe.olx_pp1_api.dto;
-
-import java.util.Map;
-
 import org.hibernate.validator.constraints.Length;
 
 import br.com.ifpe.olx_pp1_api.modelo.CategoriaProduto;
