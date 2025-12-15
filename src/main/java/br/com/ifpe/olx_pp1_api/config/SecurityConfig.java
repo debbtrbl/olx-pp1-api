@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.http.HttpMethod;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,10 +37,14 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**").permitAll()
+                
                 .requestMatchers("/api/produtos/imagens/**").permitAll()
+                .requestMatchers ("api/pagamento/webhook").permitAll()
+
+                .requestMatchers (org.springframework.http.HttpMethod.GET, "/api/produtos/**").permitAll()
+            
                 
                 .requestMatchers("/error").permitAll() 
-                // -------------------------------------
 
                 .requestMatchers(
                     "/v3/api-docs/**",
@@ -66,11 +71,7 @@ public class SecurityConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins(
-                            "https://olxmarketplace.duckdns.org", // Production
-                            "http://localhost:5173",  // Vite dev
-                            "http://localhost:3000"    // React dev
-                        )
+                        .allowedOrigins("*")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
                         .exposedHeaders("*")
