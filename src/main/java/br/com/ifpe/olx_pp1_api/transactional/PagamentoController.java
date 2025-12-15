@@ -111,6 +111,62 @@ public class PagamentoController {
         }
     }
 
+    @GetMapping("/testar-stripe")
+    public ResponseEntity<?> testarStripe() {
+        try {
+            if (pagamentoService.getStripeApiKey() == null || pagamentoService.getStripeApiKey().isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "erro", "Chave da Stripe não está configurada"
+                ));
+            }
+
+            com.stripe.Stripe.apiKey = pagamentoService.getStripeApiKey();
+            
+            // Tenta recuperar uma lista de customers (teste simples)
+            var customers = com.stripe.model.Customer.list(new java.util.HashMap<>());
+            
+            return ResponseEntity.ok(Map.of(
+                    "status", "OK",
+                    "mensagem", "Conexão com Stripe funcionando",
+                    "chaveConfigurада", pagamentoService.getStripeApiKey().substring(0, 10) + "...",
+                    "customersCount", customers.getData().size()
+            ));
+        } catch (Exception e) {
+            log.error("Erro ao testar Stripe", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "erro", "Falha na conexão com Stripe: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/verificar/{sessionId}")
+    public ResponseEntity<?> verificarSessao(@PathVariable String sessionId) {
+        try {
+            if (sessionId == null || sessionId.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "sessionId é obrigatório"
+                ));
+            }
+
+            pagamentoService.verificarEAtualizarSessao(sessionId);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Sessão verificada e atualizada com sucesso"
+            ));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro de validação ao verificar sessão: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Erro ao verificar sessão", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Erro ao verificar sessão: " + e.getMessage()
+            ));
+        }
+    }
+
     @GetMapping("/usuario/{id}")
     public ResponseEntity<?> listarPorUsuarioId(@PathVariable Long id) {
         var lista = pagamentoService.listarPorCompradorId(id);
@@ -126,12 +182,43 @@ public class PagamentoController {
             return ResponseEntity.status(401).build();
         }
 
-        String email = userDetails.getUsername();
-        var lista = pagamentoService.listarPorEmailComprador(email);
-        var resp = lista.stream()
-                .map(br.com.ifpe.olx_pp1_api.dto.PagamentoResponse::fromPagamento)
-                .toList();
+        try {
+            String email = userDetails.getUsername();
+            log.info("Listando pagamentos para usuário: {}", email);
+            
+            var lista = pagamentoService.listarPorEmailComprador(email);
+            log.info("Encontrados {} pagamentos", lista.size());
 
-        return ResponseEntity.ok(resp);
+            // Verifica os pagamentos PENDENTES na Stripe e atualiza automaticamente
+            for (Pagamento pagamento : lista) {
+                if (pagamento.getStatus() == StatusPagamento.PENDENTE && 
+                    pagamento.getStripeSessionId() != null) {
+                    try {
+                        log.info("Verificando pagamento ID {} com sessionId: {}", 
+                                pagamento.getId(), pagamento.getStripeSessionId());
+                        pagamentoService.verificarEAtualizarSessao(pagamento.getStripeSessionId());
+                        log.info("Pagamento ID {} verificado com sucesso", pagamento.getId());
+                    } catch (Exception e) {
+                        log.warn("Erro ao verificar sessão {} na Stripe: {}", 
+                                pagamento.getStripeSessionId(), e.getMessage(), e);
+                        // continua mesmo se falhar para uma sessão
+                    }
+                }
+            }
+
+            // Recarrega a lista após as verificações
+            lista = pagamentoService.listarPorEmailComprador(email);
+            var resp = lista.stream()
+                    .map(br.com.ifpe.olx_pp1_api.dto.PagamentoResponse::fromPagamento)
+                    .toList();
+
+            log.info("Retornando {} pagamentos", resp.size());
+            return ResponseEntity.ok(resp);
+        } catch (Exception e) {
+            log.error("Erro ao listar pagamentos do usuário", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Erro ao listar pagamentos"
+            ));
+        }
     }
 }

@@ -75,6 +75,16 @@ public class ProdutoService {
         repository.save(produto);
     }
 
+    // marcar como aprovado (após pagamento confirmado)
+    @Transactional
+    public void marcarComoAprovado(Long id) {
+        Produto produto = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado"));
+
+        produto.setStatus(StatusProduto.APROVADO);
+        repository.save(produto);
+    }
+
     // marcar como inativo
     @Transactional
     public void marcarComoInativo(Long id) {

@@ -36,6 +36,11 @@ public class PagamentoServiceImpl implements PagamentoService {
     }
 
     @Override
+    public String getStripeApiKey() {
+        return stripeApiKey;
+    }
+
+    @Override
     @Transactional
     public Pagamento iniciarPagamento(Long produtoId, Long compradorId, Long unitAmountCents, Long quantity, String successUrl, String cancelUrl) throws Exception {
         if (stripeApiKey == null || stripeApiKey.isBlank()) {
@@ -136,23 +141,78 @@ public class PagamentoServiceImpl implements PagamentoService {
     @Override
     @Transactional
     public void processarSessaoStripeCompletada(String stripeSessionId) throws Exception {
+        System.out.println("[DEBUG-PROCESS] Iniciando processarSessaoStripeCompletada para: " + stripeSessionId);
+        
         Optional<Pagamento> op = pagamentoRepository.findByStripeSessionId(stripeSessionId);
         if (op.isEmpty()) {
+            System.out.println("[ERROR-PROCESS] Pagamento não encontrado para sessionId: " + stripeSessionId);
             throw new IllegalArgumentException("Pagamento com stripeSessionId não encontrado: " + stripeSessionId);
         }
 
         Pagamento pagamento = op.get();
+        System.out.println("[DEBUG-PROCESS] Pagamento encontrado. ID: " + pagamento.getId() + ", Status atual: " + pagamento.getStatus());
 
         // se já estiver aprovado, ignora
-        if (pagamento.getStatus() == StatusPagamento.APROVADO) return;
+        if (pagamento.getStatus() == StatusPagamento.APROVADO) {
+            System.out.println("[DEBUG-PROCESS] Pagamento já está APROVADO, ignorando");
+            return;
+        }
 
         // marca como aprovado
+        System.out.println("[DEBUG-PROCESS] Marcando pagamento como APROVADO...");
         pagamento.setStatus(StatusPagamento.APROVADO);
         pagamento.setDataConfirmacao(java.time.LocalDateTime.now());
-        pagamentoRepository.save(pagamento);
+        Pagamento salvo = pagamentoRepository.save(pagamento);
+        System.out.println("[DEBUG-PROCESS] Pagamento salvo! Status agora é: " + salvo.getStatus());
 
         // marcar produto como vendido (usa ProdutoService)
+        System.out.println("[DEBUG-PROCESS] Marcando produto ID " + pagamento.getProduto().getId() + " como VENDIDO...");
         produtoService.marcarComoVendido(pagamento.getProduto().getId());
+        System.out.println("[DEBUG-PROCESS] Produto marcado como VENDIDO com sucesso!");
+    }
+
+    @Override
+    @Transactional
+    public void verificarEAtualizarSessao(String stripeSessionId) throws Exception {
+        if (stripeSessionId == null || stripeSessionId.isBlank()) {
+            throw new IllegalArgumentException("stripeSessionId é obrigatório");
+        }
+
+        if (stripeApiKey == null || stripeApiKey.isBlank()) {
+            throw new IllegalStateException("Chave da Stripe não configurada");
+        }
+
+        Stripe.apiKey = stripeApiKey;
+
+        try {
+            System.out.println("[DEBUG] Verificando sessão Stripe: " + stripeSessionId);
+            Session session = Session.retrieve(stripeSessionId);
+            
+            String paymentStatus = session.getPaymentStatus();
+            System.out.println("[DEBUG] Payment Status (getPaymentStatus): " + paymentStatus);
+            System.out.println("[DEBUG] Todos os detalhes: " + session.toJson());
+
+            // Se a sessão foi completada (paid ou complete), processa
+            if ("paid".equals(paymentStatus) || "complete".equals(paymentStatus)) {
+                System.out.println("[DEBUG] Sessão COMPLETADA (status=" + paymentStatus + ") - processando...");
+                processarSessaoStripeCompletada(stripeSessionId);
+            } else {
+                System.out.println("[DEBUG] Sessão NÃO completada. Status: " + paymentStatus);
+            }
+        } catch (com.stripe.exception.InvalidRequestException e) {
+            // Sessão não encontrada - ignora e continua
+            if (e.getMessage().contains("No such checkout.session")) {
+                System.out.println("[WARN] Sessão não encontrada na Stripe: " + stripeSessionId);
+                return;
+            }
+            System.out.println("[ERROR] Erro InvalidRequest: " + e.getMessage());
+            e.printStackTrace();
+            throw new Exception("Erro ao verificar sessão no Stripe: " + e.getMessage(), e);
+        } catch (com.stripe.exception.StripeException e) {
+            System.out.println("[ERROR] Erro Stripe: " + e.getMessage());
+            e.printStackTrace();
+            throw new Exception("Erro ao verificar sessão no Stripe: " + e.getMessage(), e);
+        }
     }
 
     @Override
