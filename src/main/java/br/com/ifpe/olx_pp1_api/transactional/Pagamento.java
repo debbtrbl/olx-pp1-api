@@ -37,11 +37,11 @@ public class Pagamento {
     private LocalDateTime dataConfirmacao;
 
     // sessionId retornada pelo Stripe
-    @Column(name = "stripe_session_id")
+    @Column(name = "stripe_session_id", columnDefinition = "TEXT")
     private String stripeSessionId;
 
     // opcional: url de checkout salva
-    @Column(name = "checkout_url")
+    @Column(name = "checkout_url", columnDefinition = "TEXT")
     private String checkoutUrl;
 
     // valor em centavos para registro 

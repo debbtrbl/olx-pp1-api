@@ -5,4 +5,5 @@ import java.util.Optional;
 
 public interface PagamentoRepository extends JpaRepository<Pagamento, Long> {
     Optional<Pagamento> findByStripeSessionId(String sessionId);
+    java.util.List<Pagamento> findByCompradorIdOrderByDataCriacaoDesc(Long compradorId);
 }

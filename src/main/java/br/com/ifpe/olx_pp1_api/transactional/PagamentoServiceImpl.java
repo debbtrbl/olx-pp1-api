@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 import java.util.Optional;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 @Service
 public class PagamentoServiceImpl implements PagamentoService {
@@ -81,8 +83,8 @@ public class PagamentoServiceImpl implements PagamentoService {
                         .setPriceData(priceData)
                         .build();
 
-        String sUrl = successUrl != null ? successUrl : "http://localhost:3000/sucesso";
-        String cUrl = cancelUrl != null ? cancelUrl : "http://localhost:3000/erro";
+        String sUrl = successUrl != null ? ensurePort(successUrl, 8081) : "http://localhost:8081/sucesso";
+        String cUrl = cancelUrl != null ? ensurePort(cancelUrl, 8081) : "http://localhost:8081/erro";
 
         SessionCreateParams params = SessionCreateParams.builder()
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
@@ -114,6 +116,23 @@ public class PagamentoServiceImpl implements PagamentoService {
         return pagamento;
     }
 
+    private String ensurePort(String url, int port) {
+        if (url == null) return null;
+        if (url.startsWith("/")) return "http://localhost:" + port + url;
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            String scheme = uri.getScheme() == null ? "http" : uri.getScheme();
+            if (host == null) {
+                return "http://localhost:" + port + (url.startsWith("/") ? url : "/" + url);
+            }
+            URI withPort = new URI(scheme, uri.getUserInfo(), host, port, uri.getPath(), uri.getQuery(), uri.getFragment());
+            return withPort.toString();
+        } catch (URISyntaxException e) {
+            return url;
+        }
+    }
+
     @Override
     @Transactional
     public void processarSessaoStripeCompletada(String stripeSessionId) throws Exception {
@@ -134,5 +153,20 @@ public class PagamentoServiceImpl implements PagamentoService {
 
         // marcar produto como vendido (usa ProdutoService)
         produtoService.marcarComoVendido(pagamento.getProduto().getId());
+    }
+
+    @Override
+    public java.util.List<Pagamento> listarPorCompradorId(Long compradorId) {
+        if (compradorId == null) throw new IllegalArgumentException("compradorId é obrigatório");
+        return pagamentoRepository.findByCompradorIdOrderByDataCriacaoDesc(compradorId);
+    }
+
+    @Override
+    public java.util.List<Pagamento> listarPorEmailComprador(String emailComprador) {
+        if (emailComprador == null || emailComprador.isBlank()) throw new IllegalArgumentException("emailComprador é obrigatório");
+        // procurar usuario por email
+        var usuarioOpt = usuarioService.findByEmail(emailComprador);
+        if (usuarioOpt.isEmpty()) return java.util.List.of();
+        return listarPorCompradorId(usuarioOpt.get().getId());
     }
 }

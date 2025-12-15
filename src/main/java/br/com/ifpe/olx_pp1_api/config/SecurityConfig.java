@@ -37,6 +37,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/produtos/imagens/**").permitAll()
+                .requestMatchers("/api/produtos", "/api/produtos/**").permitAll()
                 
                 .requestMatchers("/error").permitAll() 
                 // -------------------------------------
@@ -69,7 +70,8 @@ public class SecurityConfig {
                         .allowedOrigins(
                             "https://olxmarketplace.duckdns.org", // Production
                             "http://localhost:5173",  // Vite dev
-                            "http://localhost:3000"    // React dev
+                            "http://localhost:3000",    // React dev
+                            "http://localhost:8081/"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
