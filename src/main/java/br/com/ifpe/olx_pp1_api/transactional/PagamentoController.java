@@ -111,6 +111,54 @@ public class PagamentoController {
         }
     }
 
+        @PostMapping(
+            value = "/create-from-cart",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+        )
+        public ResponseEntity<?> createCheckoutFromCart(
+            @RequestBody CreateCheckoutRequest req,
+            @AuthenticationPrincipal UserDetails userDetails
+        ) {
+        try {
+            // Usuário autenticado
+            if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of(
+                "error", "Usuário não autenticado"
+            ));
+            }
+
+            // Resolve comprador pelo e-mail do token
+            Usuario comprador = usuarioService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+            // Delegação para o service: cria um pagamento POR item e uma sessão única
+            var pagamentos = pagamentoService.iniciarPagamentoDoCarrinho(
+                comprador.getId(), req.getSuccessUrl(), req.getCancelUrl()
+            );
+
+            // todos compartilham a mesma checkoutUrl e sessionId, então pega do primeiro
+            String checkoutUrl = pagamentos.isEmpty() ? null : pagamentos.get(0).getCheckoutUrl();
+            var ids = pagamentos.stream().map(Pagamento::getId).toList();
+
+            return ResponseEntity.ok(Map.of(
+                "pagamentoIds", ids,
+                "checkoutUrl", checkoutUrl
+            ));
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro de validação: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", e.getMessage()
+            ));
+        } catch (Exception e) {
+            log.error("Erro ao iniciar pagamento (carrinho)", e);
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Erro interno ao iniciar pagamento"
+            ));
+        }
+        }
+
     @GetMapping("/testar-stripe")
     public ResponseEntity<?> testarStripe() {
         try {

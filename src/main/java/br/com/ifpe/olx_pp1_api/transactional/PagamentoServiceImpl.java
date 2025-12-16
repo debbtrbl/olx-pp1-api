@@ -4,6 +4,10 @@ import br.com.ifpe.olx_pp1_api.modelo.Produto;
 import br.com.ifpe.olx_pp1_api.modelo.Usuario;
 import br.com.ifpe.olx_pp1_api.service.ProdutoService;
 import br.com.ifpe.olx_pp1_api.service.UsuarioService;
+import br.com.ifpe.olx_pp1_api.service.CarrinhoService;
+import java.util.List;
+import java.math.BigDecimal;
+import br.com.ifpe.olx_pp1_api.modelo.CarrinhoItem;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
@@ -23,16 +27,19 @@ public class PagamentoServiceImpl implements PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final ProdutoService produtoService;
     private final UsuarioService usuarioService;
+    private final CarrinhoService carrinhoService;
 
     @Value("${stripe.api.key:}")
     private String stripeApiKey;
 
     public PagamentoServiceImpl(PagamentoRepository pagamentoRepository,
                                 ProdutoService produtoService,
-                                UsuarioService usuarioService) {
+                                UsuarioService usuarioService,
+                                CarrinhoService carrinhoService) {
         this.pagamentoRepository = pagamentoRepository;
         this.produtoService = produtoService;
         this.usuarioService = usuarioService;
+        this.carrinhoService = carrinhoService;
     }
 
     @Override
@@ -121,6 +128,99 @@ public class PagamentoServiceImpl implements PagamentoService {
         return pagamento;
     }
 
+    @Override
+    @Transactional
+    public java.util.List<Pagamento> iniciarPagamentoDoCarrinho(Long compradorId, String successUrl, String cancelUrl) throws Exception {
+        if (stripeApiKey == null || stripeApiKey.isBlank()) {
+            throw new IllegalStateException("Chave da Stripe não configurada (stripe.api.key)");
+        }
+
+        Usuario comprador = usuarioService.buscarPorId(compradorId);
+        java.util.List<CarrinhoItem> itens = carrinhoService.listarCarrinho(comprador.getEmail());
+        if (itens == null || itens.isEmpty()) {
+            throw new IllegalArgumentException("Carrinho vazio para o usuário: " + comprador.getEmail());
+        }
+
+        // cria pagamentos pendentes (um por item) e monta itens do Stripe
+        java.util.List<Pagamento> pagamentosCriados = new java.util.ArrayList<>();
+        java.util.List<SessionCreateParams.LineItem> stripeItems = new java.util.ArrayList<>();
+
+        for (CarrinhoItem ci : itens) {
+            if (ci.getPrecoUnitario() == null) throw new IllegalArgumentException("Preço do item inválido");
+            long unitAmount = ci.getPrecoUnitario().multiply(BigDecimal.valueOf(100)).longValue();
+            long qty = ci.getQuantidade() == null ? 1L : ci.getQuantidade().longValue();
+
+            Pagamento p = Pagamento.builder()
+                    .produto(ci.getProduto())
+                    .comprador(comprador)
+                    .status(StatusPagamento.PENDENTE)
+                    .amountCents(unitAmount)
+                    .quantity(qty)
+                    .build();
+
+            p = pagamentoRepository.save(p);
+            pagamentosCriados.add(p);
+
+            SessionCreateParams.LineItem.PriceData.ProductData productData =
+                    SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                            .setName(ci.getProduto().getNome() != null ? ci.getProduto().getNome() : "Produto")
+                            .build();
+
+            SessionCreateParams.LineItem.PriceData priceData =
+                    SessionCreateParams.LineItem.PriceData.builder()
+                            .setCurrency("brl")
+                            .setUnitAmount(unitAmount)
+                            .setProductData(productData)
+                            .build();
+
+            SessionCreateParams.LineItem item =
+                    SessionCreateParams.LineItem.builder()
+                            .setQuantity(qty)
+                            .setPriceData(priceData)
+                            .build();
+
+            stripeItems.add(item);
+        }
+
+        // cria sessão no Stripe com todos os itens
+        Stripe.apiKey = stripeApiKey;
+
+        String sUrl = successUrl != null ? ensurePort(successUrl, 8081) : "http://localhost:8081/sucesso";
+        String cUrl = cancelUrl != null ? ensurePort(cancelUrl, 8081) : "http://localhost:8081/erro";
+
+        String pagamentoIds = pagamentosCriados.stream().map(p -> String.valueOf(p.getId())).collect(java.util.stream.Collectors.joining(","));
+
+        SessionCreateParams.Builder paramsBuilder = SessionCreateParams.builder()
+                .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
+                .setMode(SessionCreateParams.Mode.PAYMENT)
+                .putAllMetadata(Map.of("pagamentoIds", pagamentoIds, "compradorId", String.valueOf(compradorId)))
+                .setSuccessUrl(sUrl + "?session_id={CHECKOUT_SESSION_ID}")
+                .setCancelUrl(cUrl);
+
+        for (SessionCreateParams.LineItem li : stripeItems) paramsBuilder.addLineItem(li);
+
+        Session session;
+        try {
+            session = Session.create(paramsBuilder.build());
+        } catch (StripeException e) {
+            // marcar todos pagamentos como FALHOU
+            for (Pagamento p : pagamentosCriados) {
+                p.setStatus(StatusPagamento.FALHOU);
+                pagamentoRepository.save(p);
+            }
+            throw e;
+        }
+
+        // salvar sessionId e checkoutUrl em todos os pagamentos
+        for (Pagamento p : pagamentosCriados) {
+            p.setStripeSessionId(session.getId());
+            p.setCheckoutUrl(session.getUrl());
+            pagamentoRepository.save(p);
+        }
+
+        return pagamentosCriados;
+    }
+
     private String ensurePort(String url, int port) {
         if (url == null) return null;
         if (url.startsWith("/")) return "http://localhost:" + port + url;
@@ -143,32 +243,47 @@ public class PagamentoServiceImpl implements PagamentoService {
     public void processarSessaoStripeCompletada(String stripeSessionId) throws Exception {
         System.out.println("[DEBUG-PROCESS] Iniciando processarSessaoStripeCompletada para: " + stripeSessionId);
         
-        Optional<Pagamento> op = pagamentoRepository.findByStripeSessionId(stripeSessionId);
-        if (op.isEmpty()) {
+        List<Pagamento> pagamentos = pagamentoRepository.findAllByStripeSessionId(stripeSessionId);
+        if (pagamentos == null || pagamentos.isEmpty()) {
             System.out.println("[ERROR-PROCESS] Pagamento não encontrado para sessionId: " + stripeSessionId);
             throw new IllegalArgumentException("Pagamento com stripeSessionId não encontrado: " + stripeSessionId);
         }
 
-        Pagamento pagamento = op.get();
-        System.out.println("[DEBUG-PROCESS] Pagamento encontrado. ID: " + pagamento.getId() + ", Status atual: " + pagamento.getStatus());
+        System.out.println("[DEBUG-PROCESS] Encontrados " + pagamentos.size() + " pagamentos para esta sessão.");
 
-        // se já estiver aprovado, ignora
-        if (pagamento.getStatus() == StatusPagamento.APROVADO) {
-            System.out.println("[DEBUG-PROCESS] Pagamento já está APROVADO, ignorando");
-            return;
+        for (Pagamento pagamento : pagamentos) {
+            System.out.println("[DEBUG-PROCESS] Processando pagamento ID: " + pagamento.getId() + ", Status atual: " + pagamento.getStatus());
+
+            // se já estiver aprovado, ignora
+            if (pagamento.getStatus() == StatusPagamento.APROVADO) {
+                System.out.println("[DEBUG-PROCESS] Pagamento ID " + pagamento.getId() + " já está APROVADO, ignorando");
+                continue;
+            }
+
+            // marca como aprovado
+            System.out.println("[DEBUG-PROCESS] Marcando pagamento ID " + pagamento.getId() + " como APROVADO...");
+            pagamento.setStatus(StatusPagamento.APROVADO);
+            pagamento.setDataConfirmacao(java.time.LocalDateTime.now());
+            Pagamento salvo = pagamentoRepository.save(pagamento);
+            System.out.println("[DEBUG-PROCESS] Pagamento salvo! ID=" + salvo.getId() + " Status agora é: " + salvo.getStatus());
+
+            // marcar produto como vendido (usa ProdutoService)
+            System.out.println("[DEBUG-PROCESS] Marcando produto ID " + pagamento.getProduto().getId() + " como VENDIDO...");
+            produtoService.marcarComoVendido(pagamento.getProduto().getId());
+            System.out.println("[DEBUG-PROCESS] Produto marcado como VENDIDO com sucesso! (produtoId=" + pagamento.getProduto().getId() + ")");
         }
 
-        // marca como aprovado
-        System.out.println("[DEBUG-PROCESS] Marcando pagamento como APROVADO...");
-        pagamento.setStatus(StatusPagamento.APROVADO);
-        pagamento.setDataConfirmacao(java.time.LocalDateTime.now());
-        Pagamento salvo = pagamentoRepository.save(pagamento);
-        System.out.println("[DEBUG-PROCESS] Pagamento salvo! Status agora é: " + salvo.getStatus());
-
-        // marcar produto como vendido (usa ProdutoService)
-        System.out.println("[DEBUG-PROCESS] Marcando produto ID " + pagamento.getProduto().getId() + " como VENDIDO...");
-        produtoService.marcarComoVendido(pagamento.getProduto().getId());
-        System.out.println("[DEBUG-PROCESS] Produto marcado como VENDIDO com sucesso!");
+        // limpa o carrinho do comprador (se aplicável)
+        try {
+            String compradorEmail = pagamentos.get(0).getComprador().getEmail();
+            if (compradorEmail != null) {
+                System.out.println("[DEBUG-PROCESS] Limpando carrinho do comprador: " + compradorEmail);
+                carrinhoService.limparCarrinho(compradorEmail);
+            }
+        } catch (Exception e) {
+            // não interrompe o fluxo principal se a limpeza do carrinho falhar
+            System.out.println("[WARN] Falha ao limpar carrinho após pagamento: " + e.getMessage());
+        }
     }
 
     @Override
